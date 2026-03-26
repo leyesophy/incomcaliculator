@@ -85,4 +85,13 @@ with tab2:
         total_year_income = val_prev + current_company_total
         
         st.divider()
-        st.write("### 今
+        st.write("### 今年の合計推計年収")
+        st.markdown(f'<div class="big-font">{total_year_income:,.0f} <span class="unit">円</span></div>', unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        col1.metric("前職の支払金額", f"{val_prev:,}円")
+        col2.metric("現職の推計（年内）", f"{current_company_total:,}円")
+    else:
+        st.info("「今の会社の月給」を入力してください。")
+
+st.caption("※このシミュレーターは、入力された額面金額に基づいた単純計算です。")
