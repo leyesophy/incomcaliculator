@@ -1,32 +1,74 @@
 import streamlit as st
+import unicodedata
 
 # 画面設定
 st.set_page_config(page_title="推計年収シミュレーター", layout="centered")
 
-# CSS設定（前回を完全に維持）
+# CSS設定
 st.markdown("""
     <style>
-    html, body, [class*="css"] { font-size: 20px !important; }
-    button[data-baseweb="tab"] div { font-size: 22px !important; }
-    .stMarkdown p, label { font-size: 22px !important; font-weight: bold !important; }
+    /* 全体のベース文字サイズ */
+    html, body, [class*="css"] {
+        font-size: 20px !important;
+    }
+
+    /* 【修正】タイトルを一回り小さく調整 */
+    h1 {
+        font-size: 32px !important;
+        padding-bottom: 10px;
+    }
     
-    /* number_inputのサイズ調整 */
+    /* タブの文字サイズ */
+    button[data-baseweb="tab"] div {
+        font-size: 22px !important;
+    }
+
+    /* 入力ラベル（項目名） */
+    .stMarkdown p, label {
+        font-size: 22px !important;
+        font-weight: bold !important;
+    }
+
+    /* 入力ボックス（数字キーボード対応サイズ） */
     div[data-baseweb="input"] {
         font-size: 26px !important;
         height: 60px !important;
     }
-    
+
+    /* セレクトボックス */
+    div[data-baseweb="select"] {
+        font-size: 24px !important;
+    }
+
+    /* 結果表示ボックス */
     .result-box {
-        font-size: 48px !important; font-weight: bold; color: #1E88E5;
-        text-align: center; background-color: #f0f2f6; padding: 30px;
-        border-radius: 15px; margin: 15px 0; border: 2px solid #1E88E5;
+        font-size: 48px !important;
+        font-weight: bold;
+        color: #1E88E5;
+        text-align: center;
+        background-color: #f0f2f6;
+        padding: 30px;
+        border-radius: 15px;
+        margin: 15px 0;
+        border: 2px solid #1E88E5;
     }
     .unit { font-size: 24px; color: #333; }
-    
+
+    /* 説明文 */
+    .stCaption {
+        font-size: 18px !important;
+        line-height: 1.6;
+    }
+
+    /* クリアボタンのスタイル */
     .stButton > button {
-        width: 100% !important; height: 55px !important; font-size: 20px !important;
-        color: #ff4b4b !important; border: 2px solid #ff4b4b !important;
-        background-color: white !important; border-radius: 10px !important;
+        width: 100% !important;
+        height: 55px !important;
+        font-size: 20px !important;
+        color: #ff4b4b !important;
+        border: 2px solid #ff4b4b !important;
+        background-color: white !important;
+        border-radius: 10px !important;
         margin-bottom: 20px !important;
     }
     </style>
@@ -40,12 +82,9 @@ def clear_all():
     st.session_state.clear_count += 1
     st.rerun()
 
-# --- 【改良版】デフォルトを空欄にする入力関数 ---
+# デフォルト空欄 & 数字キーボード強制の入力関数
 def number_input_fixed(label, key):
     unique_key = f"num_{key}_{st.session_state.clear_count}"
-    
-    # value=None にすることで初期状態を空欄にします
-    # placeholderを設定することで、入力のヒントを表示します
     val = st.number_input(
         label, 
         min_value=0, 
@@ -57,6 +96,7 @@ def number_input_fixed(label, key):
     )
     return val
 
+# タイトル（サイズはCSSで制御）
 st.title("💰 推計年収シミュレーター")
 st.divider()
 
@@ -74,7 +114,6 @@ with tab1:
     st.write("### ボーナス実績")
     bonus = number_input_fixed("年間合計", "t1_b")
     
-    # すべての数値が入力されているかチェック
     if m1 and m2 and m3:
         b_val = bonus if bonus else 0
         avg = (m1 + m2 + m3) / 3
@@ -88,6 +127,8 @@ with tab2:
         clear_all()
         
     st.write("### 源泉徴収票から年換算")
+    st.caption("「もし1年間フルで在籍していたら」を逆算します。")
+
     pay_amount = number_input_fixed("支払金額（現職分のみ）", "t2_pay")
     
     months_list = [f"{i}月" for i in range(1, 13)]
@@ -100,3 +141,7 @@ with tab2:
         st.divider()
         st.write(f"### 💎 現職の推計年収")
         st.markdown(f'<div class="result-box">{int(theoretical_annual):,} <span class="unit">円</span></div>', unsafe_allow_html=True)
+        st.info(f"💡 {start_month}月〜12月の実績に基づいた理論値です。")
+
+st.divider()
+st.caption("※この数値は額面での推計です。")
