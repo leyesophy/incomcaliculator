@@ -1,10 +1,11 @@
 import streamlit as st
 import unicodedata
+import re
 
 # 画面設定
 st.set_page_config(page_title="推計年収シミュレーター", layout="centered")
 
-# CSS設定（文字サイズ等は維持）
+# CSS設定（前回を完全に維持）
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 20px !important; }
@@ -28,43 +29,43 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 確実なクリアのためのロジック ---
-# クリアボタンが押されるたびにこの数値をカウントアップし、入力欄のIDを新しくします
 if "clear_count" not in st.session_state:
     st.session_state.clear_count = 0
 
 def clear_all():
-    # セッション内の入力データを消去
     for key in list(st.session_state.keys()):
         if key.startswith("data_"):
             st.session_state[key] = ""
-    # カウントを増やすことで、入力欄（widget）を「新品」に交換する
     st.session_state.clear_count += 1
     st.rerun()
 
-# 金額入力関数（改良版）
+# --- 半角制御を強化した入力関数 ---
 def comma_input(label, key):
     data_key = f"data_{key}"
-    # クリアボタンで新しくなったIDを生成
     widget_key = f"widget_{key}_{st.session_state.clear_count}"
     
     if data_key not in st.session_state:
         st.session_state[data_key] = ""
 
-    # valueにはセッションの値を、keyにはクリアのたびに変わる一意のIDを指定
     raw_val = st.text_input(label, value=st.session_state[data_key], key=widget_key, placeholder="0")
     
-    normalized_val = unicodedata.normalize('NFKC', raw_val).replace(',', '').replace('円', '')
+    # 1. 全角英数字を半角に変換
+    normalized = unicodedata.normalize('NFKC', raw_val)
+    # 2. 数字、カンマ以外の文字（日本語など）をすべて削除
+    clean_val = re.sub(r'[^0-9]', '', normalized)
     
-    if normalized_val.isdigit():
-        number = int(normalized_val)
+    if clean_val.isdigit():
+        number = int(clean_val)
         formatted = f"{number:,}"
+        # 変換後の値が元の入力と異なる場合（全角だった、または変な文字が入っていた）、強制上書き
         if st.session_state[data_key] != formatted:
             st.session_state[data_key] = formatted
             st.rerun()
         return number
-    elif normalized_val == "":
-        st.session_state[data_key] = ""
+    elif clean_val == "":
+        if st.session_state[data_key] != "":
+            st.session_state[data_key] = ""
+            st.rerun()
         return None
     return None
 
