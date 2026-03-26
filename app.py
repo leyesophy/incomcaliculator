@@ -3,7 +3,7 @@ import streamlit as st
 # 画面設定
 st.set_page_config(page_title="推計年収シミュレーター", layout="centered")
 
-# CSS設定（文字サイズ等は維持）
+# CSS設定（前回を完全に維持）
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 20px !important; }
@@ -40,19 +40,20 @@ def clear_all():
     st.session_state.clear_count += 1
     st.rerun()
 
-# --- 【最重要】キーボードを強制的に数字（半角）にする入力関数 ---
+# --- 【改良版】デフォルトを空欄にする入力関数 ---
 def number_input_fixed(label, key):
-    # keyにclear_countを含めることで、クリアボタン押下時に確実に初期化
     unique_key = f"num_{key}_{st.session_state.clear_count}"
     
-    # st.number_inputを使うことで、ブラウザが「数字キーボード」を強制起動します
+    # value=None にすることで初期状態を空欄にします
+    # placeholderを設定することで、入力のヒントを表示します
     val = st.number_input(
         label, 
         min_value=0, 
-        value=0, 
+        value=None, 
+        placeholder="金額を入力",
         step=10000, 
         key=unique_key,
-        format="%d" # 整数として表示
+        format="%d"
     )
     return val
 
@@ -73,12 +74,13 @@ with tab1:
     st.write("### ボーナス実績")
     bonus = number_input_fixed("年間合計", "t1_b")
     
-    if m1 > 0 or m2 > 0 or m3 > 0:
+    # すべての数値が入力されているかチェック
+    if m1 and m2 and m3:
+        b_val = bonus if bonus else 0
         avg = (m1 + m2 + m3) / 3
-        annual = (avg * 12) + bonus
+        annual = (avg * 12) + b_val
         st.divider()
         st.write("### 💎 理論上の年収（予測）")
-        # 表示側ではしっかりカンマ区切りにします
         st.markdown(f'<div class="result-box">{int(annual):,} <span class="unit">円</span></div>', unsafe_allow_html=True)
 
 with tab2:
@@ -92,7 +94,7 @@ with tab2:
     start_month_str = st.selectbox("現職の入社月", options=months_list, index=7)
     start_month = int(start_month_str.replace('月', ''))
 
-    if pay_amount > 0:
+    if pay_amount:
         working_months = 12 - start_month + 1
         theoretical_annual = (pay_amount / working_months) * 12
         st.divider()
