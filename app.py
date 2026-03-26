@@ -1,4 +1,5 @@
 import streamlit as st
+from datetime import date
 
 # 画面設定
 st.set_page_config(page_title="推計年収シミュレーター", layout="centered")
@@ -23,7 +24,7 @@ st.markdown("""
 
 st.title("💰 推計年収シミュレーター")
 
-tab1, tab2 = st.tabs(["📄 給与明細3ヶ月分から", "📑 現職の源泉徴収票から合算"])
+tab1, tab2 = st.tabs(["📄 給与明細3ヶ月分から", "📑 現職の源泉徴収票から予測"])
 
 with tab1:
     st.subheader("直近3ヶ月の給与（額面）から予測")
@@ -40,48 +41,46 @@ with tab1:
         st.markdown(f'<div class="big-font">{annual_total:,.0f} <span class="unit">円</span></div>', unsafe_allow_html=True)
 
 with tab2:
-    st.subheader("📑 源泉徴収票の項目を合算")
-    st.info("源泉徴収票に記載されている「現職分」と「前職分」をそれぞれ入力してください。")
+    st.subheader("📑 現職のみの推計年収（中途入社対応）")
+    st.info("現職の源泉徴収票に記載された「これまでの実績」から、今の会社での年収を予測します。")
 
-    # ① 現職の支払金額（メインの大きな枠）
-    current_pay = st.number_input("① 現職の「支払金額」（メインの枠）", value=None, placeholder="源泉徴収票の大きな数字を入力", step=1000, format="%d", key="t2_curr")
-
-    # ② 前職の支払金額（下部や摘要欄に記載されている分）
-    previous_pay = st.number_input("② 前職の「支払金額」（下部に記載分）", value=None, placeholder="前職分の金額を入力", step=1000, format="%d", key="t2_prev")
+    # 入社日の入力
+    hire_date = st.date_input("現職の入社日", value=date.today(), format="YYYY/MM/DD")
+    
+    # 現職の源泉徴収票に記載された「支払金額」（現職分のみ）
+    current_pay = st.number_input("① 源泉徴収票の「支払金額」（現職分）", value=None, placeholder="現職でのこれまでの合計額", step=1000, format="%d", key="t2_curr")
 
     st.divider()
     
-    st.write("#### ③ 年末までの残り支給分（追加見込）")
-    st.caption("源泉徴収票の締め日以降に支払われる予定の金額です。")
+    st.write("#### ② 年末までの追加支給分（見込）")
+    st.caption(f"{hire_date.month}月入社の場合の、今後の収入を予測します。")
     
     col1, col2 = st.columns(2)
     with col1:
         future_m = st.number_input("今後の月給（額面）", value=None, placeholder="1ヶ月分", step=1000, format="%d", key="t2_f_m")
     with col2:
-        future_c = st.number_input("残り回数", value=0, min_value=0, max_value=12, step=1, key="t2_f_c")
+        # 入社月から逆算した、年内の残り回数のデフォルトを提示
+        default_count = 12 - date.today().month + 1 if date.today().year == hire_date.year else 0
+        future_c = st.number_input("残り支給回数", value=default_count, min_value=0, max_value=12, step=1, key="t2_f_c")
     
     future_b = st.number_input("今後のボーナス予定（額面）", value=None, placeholder="0", step=10000, format="%d", key="t2_f_b")
 
     # 計算
     if current_pay is not None:
         val_curr = current_pay
-        val_prev = previous_pay if previous_pay else 0
         val_fm = future_m if future_m else 0
         val_fc = future_c if future_c else 0
         val_fb = future_b if future_b else 0
         
-        # 合計 = 現職(源泉票) + 前職(源泉票) + (月給 × 残り回数) + 今後のボーナス
-        total_income = val_curr + val_prev + (val_fm * val_fc) + val_fb
+        # 今回の仕様：前職分は含まず、現職の源泉徴収票の額 ＋ 今後の見込
+        total_income = val_curr + (val_fm * val_fc) + val_fb
         
-        st.write("### 今年の最終着地（推計）")
+        st.write("### 今の会社での着地推計（現職のみ）")
         st.markdown(f'<div class="big-font">{total_income:,.0f} <span class="unit">円</span></div>', unsafe_allow_html=True)
         
-        # わかりやすい内訳表示
-        st.write("📊 **計算の内訳**")
-        st.write(f"- 源泉徴収票（現職）: {val_curr:,}円")
-        st.write(f"- 源泉徴収票（前職）: {val_prev:,}円")
-        st.write(f"- 今後の支給予定: {(val_fm * val_fc) + val_fb:,}円")
+        # 状況の解説
+        st.info(f"💡 {hire_date.year}年度は、これまでの実績 {val_curr:,}円 に、今後見込分を加算して計算しています。")
     else:
         st.info("源泉徴収票の「支払金額」を入力してください。")
 
-st.caption("※金額はすべて「額面（税引前）」で入力してください。")
+st.caption("※前職の収入額は含まず、現職での総収入（額面）を計算しています。")
