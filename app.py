@@ -4,37 +4,26 @@ import unicodedata
 # 画面設定
 st.set_page_config(page_title="推計年収シミュレーター", layout="centered")
 
-# 【全般的な文字サイズアップ】CSS
+# 【全般的な文字サイズアップ】CSS（維持）
 st.markdown("""
     <style>
-    /* 全体のベース文字サイズを大きく */
-    html, body, [class*="css"]  {
+    html, body, [class*="css"] {
         font-size: 20px !important;
     }
-    
-    /* タブの文字サイズ */
     button[data-baseweb="tab"] div {
         font-size: 22px !important;
     }
-
-    /* 入力ラベル（項目名）の文字サイズ */
     .stMarkdown p, label {
         font-size: 22px !important;
         font-weight: bold !important;
     }
-
-    /* 入力ボックス内の文字サイズと高さ */
     div[data-baseweb="input"] {
         font-size: 26px !important;
         height: 60px !important;
     }
-
-    /* セレクトボックス（入社月）の文字サイズ */
     div[data-baseweb="select"] {
         font-size: 24px !important;
     }
-
-    /* 結果表示ボックス（青文字） */
     .result-box {
         font-size: 48px !important;
         font-weight: bold;
@@ -47,14 +36,29 @@ st.markdown("""
         border: 2px solid #1E88E5;
     }
     .unit { font-size: 24px; color: #333; }
-
-    /* 説明文（caption）も読みやすく */
     .stCaption {
         font-size: 18px !important;
         line-height: 1.6;
     }
+    /* クリアボタン専用スタイル */
+    .stButton > button {
+        width: 100% !important;
+        height: 55px !important;
+        font-size: 22px !important;
+        color: #ff4b4b !important;
+        border: 2px solid #ff4b4b !important;
+        background-color: white !important;
+        border-radius: 10px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
+
+# セッションクリア用の関数
+def clear_inputs(keys):
+    for key in keys:
+        if key in st.session_state:
+            st.session_state[key] = ""
+    st.rerun()
 
 # 金額入力をカンマ区切りにする補助関数
 def comma_input(label, key):
@@ -63,7 +67,6 @@ def comma_input(label, key):
 
     raw_val = st.text_input(label, value=st.session_state[key], key=f"input_{key}", placeholder="例：3,000,000")
 
-    # 全角を半角に変換し、カンマを除去
     normalized_val = unicodedata.normalize('NFKC', raw_val).replace(',', '').replace('円', '')
     
     if normalized_val.isdigit():
@@ -102,6 +105,10 @@ with tab1:
         st.divider()
         st.write("### 💎 理論上の年収（予測）")
         st.markdown(f'<div class="result-box">{annual:,.0f} <span class="unit">円</span></div>', unsafe_allow_html=True)
+        
+        # クリアボタンの配置
+        if st.button("🔄 入力内容をクリア", key="btn_clear_t1"):
+            clear_inputs(["t1_m1", "t1_m2", "t1_m3", "t1_b"])
 
 with tab2:
     st.write("### 源泉徴収票から年換算")
@@ -114,13 +121,16 @@ with tab2:
     start_month = int(start_month_str.replace('月', ''))
 
     if pay_amount:
-        # 在職月数の計算（入社月〜12月）
         working_months = 12 - start_month + 1
         theoretical_annual = (pay_amount / working_months) * 12
         
         st.divider()
         st.write(f"### 💎 現職の推計年収")
         st.markdown(f'<div class="result-box">{theoretical_annual:,.0f} <span class="unit">円</span></div>', unsafe_allow_html=True)
+        
+        # クリアボタンの配置
+        if st.button("🔄 入力内容をクリア", key="btn_clear_t2"):
+            clear_inputs(["t2_pay"])
         
         st.info(f"💡 {start_month}月〜12月の実績（{working_months}ヶ月分）から、12ヶ月分を算出した理論値です。")
 
