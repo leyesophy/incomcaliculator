@@ -4,7 +4,7 @@ import unicodedata
 # 画面設定
 st.set_page_config(page_title="推計年収シミュレーター", layout="centered")
 
-# 【全般的な文字サイズアップ】CSS（維持）
+# CSS設定（文字サイズ・ボタンデザインを維持）
 st.markdown("""
     <style>
     html, body, [class*="css"] {
@@ -40,15 +40,16 @@ st.markdown("""
         font-size: 18px !important;
         line-height: 1.6;
     }
-    /* クリアボタン専用スタイル */
+    /* クリアボタンのスタイル */
     .stButton > button {
         width: 100% !important;
         height: 55px !important;
-        font-size: 22px !important;
+        font-size: 20px !important;
         color: #ff4b4b !important;
         border: 2px solid #ff4b4b !important;
         background-color: white !important;
         border-radius: 10px !important;
+        margin-bottom: 20px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -60,13 +61,12 @@ def clear_inputs(keys):
             st.session_state[key] = ""
     st.rerun()
 
-# 金額入力をカンマ区切りにする補助関数
+# 金額入力関数（確定時にカンマ上書き）
 def comma_input(label, key):
     if key not in st.session_state:
         st.session_state[key] = ""
 
-    raw_val = st.text_input(label, value=st.session_state[key], key=f"input_{key}", placeholder="例：3,000,000")
-
+    raw_val = st.text_input(label, value=st.session_state[key], key=f"input_{key}", placeholder="0")
     normalized_val = unicodedata.normalize('NFKC', raw_val).replace(',', '').replace('円', '')
     
     if normalized_val.isdigit():
@@ -90,6 +90,10 @@ st.divider()
 tab1, tab2 = st.tabs(["📄 給与明細", "📑 源泉徴収票"])
 
 with tab1:
+    # --- クリアボタンを一番上に配置 ---
+    if st.button("🔄 入力内容をすべてクリア", key="btn_clear_t1"):
+        clear_inputs(["t1_m1", "t1_m2", "t1_m3", "t1_b"])
+    
     st.write("### 直近3ヶ月の給与（額面）")
     m1 = comma_input("1ヶ月目", "t1_m1")
     m2 = comma_input("2ヶ月目", "t1_m2")
@@ -105,22 +109,25 @@ with tab1:
         st.divider()
         st.write("### 💎 理論上の年収（予測）")
         st.markdown(f'<div class="result-box">{annual:,.0f} <span class="unit">円</span></div>', unsafe_allow_html=True)
-        
-        # クリアボタンの配置
-        if st.button("🔄 入力内容をクリア", key="btn_clear_t1"):
-            clear_inputs(["t1_m1", "t1_m2", "t1_m3", "t1_b"])
 
 with tab2:
+    # --- 源泉徴収票タブでも一番上にクリアボタンを配置 ---
+    if st.button("🔄 入力内容をすべてクリア", key="btn_clear_t2"):
+        clear_inputs(["t2_pay"])
+        
     st.write("### 源泉徴収票から年換算")
     st.caption("「もし1年間フルで在籍していたら」を逆算します。")
 
+    # 支払い額入力の直上にボタンがある状態になります
     pay_amount = comma_input("支払金額（現職分のみ）", "t2_pay")
     
     months_list = [f"{i}月" for i in range(1, 13)]
+    # デフォルトを8月に設定
     start_month_str = st.selectbox("現職の入社月", options=months_list, index=7)
     start_month = int(start_month_str.replace('月', ''))
 
     if pay_amount:
+        # 在職月数の計算（入社月〜12月）
         working_months = 12 - start_month + 1
         theoretical_annual = (pay_amount / working_months) * 12
         
@@ -128,11 +135,7 @@ with tab2:
         st.write(f"### 💎 現職の推計年収")
         st.markdown(f'<div class="result-box">{theoretical_annual:,.0f} <span class="unit">円</span></div>', unsafe_allow_html=True)
         
-        # クリアボタンの配置
-        if st.button("🔄 入力内容をクリア", key="btn_clear_t2"):
-            clear_inputs(["t2_pay"])
-        
-        st.info(f"💡 {start_month}月〜12月の実績（{working_months}ヶ月分）から、12ヶ月分を算出した理論値です。")
+        st.info(f"💡 {start_month}月〜12月の実績に基づいた理論値です。")
 
 st.divider()
 st.caption("※この数値は額面での推計です。")
